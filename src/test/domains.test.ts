@@ -11,6 +11,7 @@ const {
   getDomain,
   getDomains,
   writeService,
+  writeChannel,
   versionDomain,
   rmDomain,
   rmDomainById,
@@ -197,6 +198,49 @@ describe('Domain SDK', () => {
           markdown: '# Hello world',
         },
       ]);
+    });
+
+    it('when channels are nested into the domains folder it only returns the domains', async () => {
+      // Create a domain
+      await writeDomain({
+        id: 'Orders',
+        name: 'Orders Domain',
+        version: '1.0.0',
+        summary: 'This is a summary',
+        markdown: '# Hello world',
+      });
+
+      // Create a channel nested inside the domain directory
+      await writeChannel(
+        {
+          id: 'channel:orders.order.created',
+          name: 'Order Created Channel',
+          version: '1.x',
+          summary: 'Channel for order created events',
+          markdown: '# Channel description',
+          address: 'orders.order.created',
+          protocols: ['kafka'],
+        },
+        { path: '/domains/Orders/channels/orders.order.created' }
+      );
+
+      const domains = await getDomains();
+
+      // Verify that channels are not included in the domains list
+      expect(domains).toEqual([
+        {
+          id: 'Orders',
+          name: 'Orders Domain',
+          version: '1.0.0',
+          summary: 'This is a summary',
+          markdown: '# Hello world',
+        },
+      ]);
+
+      // Verify that no channel IDs appear in the domains list
+      const domainIds = domains.map((d) => d.id);
+      expect(domainIds).not.toContain('channel:orders.order.created');
+      expect(domainIds.every((id) => !id.startsWith('channel:'))).toBe(true);
     });
 
     it('returns only the latest domains when `latestOnly` is set to true,', async () => {
